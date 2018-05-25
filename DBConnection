@@ -1,0 +1,45 @@
+import mysql.connector
+from mysql.connector import errorcode
+from datetime import datetime
+
+config = {
+    "user": "root",
+    "password": "admin123",
+    "host": "localhost",
+    "database": "spiderv1"
+}
+showQuery = "select * from movies"
+query = "insert into `movies`(name,type,actor,link,source,`mrank`,insertdate) values(%s,%s,%s,%s,%s,%s,%s)"
+# datetime.now get the current date , datetime,now.().date() only get date yyyy-mm-dd
+values = ('testname', 'testtype', 'testactor', 'www.test.com', 'testsource', '0', datetime.now())
+
+
+def showResult(cursor):
+    # Here，insertdate is datetime type ,need to useing strftime to transform to string ... whether the name shall be same as field or not ??? NOT SURE NEED TO CHECK
+    for (name, type, actor, link, source, mrank, insertdate) in cursor:
+        strInsertDate = insertdate.strftime("%Y-%m-%d-%H:%M:%S")
+        print("result is %s,%s,%s,%s,%s,%s,%s" % (name, type, actor, link, source, mrank, strInsertDate))
+    return None
+
+
+# you can change connector.database to connect to different database eg.. cnx.database = 'mysql'
+# Below is another way to connect to mysql , but i think using **args would be more readable & easy to apply new values
+# cnx = mysql.connector.connect(user='root',password='admin123',host='localhost',database='mysql')
+try:
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor()
+    cursor.execute(query, values)
+    cursor.execute(showQuery)
+    showResult(cursor)
+
+except mysql.connector.Error as err:
+    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print('Access is denied')
+    elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print('Database is not exists')
+    else:
+        print(err)
+else:
+    cnx.commit()
+    cursor.close()
+    cnx.close
