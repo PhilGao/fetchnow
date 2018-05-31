@@ -1,11 +1,13 @@
 import requests
 import chardet
 from requests import exceptions
+from bs4 import BeautifulSoup
+import time
 
 # fetch homepage , get all the movies title /actor/rank/type/link , note the insert date time
 # fetch the next pages , same as it
 
-baseUrl = "http://www.dytt8.net/html/gndy/dyzz/index.html"
+baseUrl = "http://www.dytt8.net/html/gndy/dyzz/"
 headers = {
     'user-Agent': r'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'
 }
@@ -26,19 +28,41 @@ def get_encoding(response):
     return "".join(encoding)
 
 
-def get_movies(url):
+def get_raw_movie_data(url, rawdata):
     try:
         response = requests.get(url, headers=headers)
         response.encoding = get_encoding(response)
         # print(response.encoding)
-        print(response.text)
+        # print(response.text)
+        html = response.text
+        soup = BeautifulSoup(html, "lxml")
+
+        results = soup.find('div', {"class": "co_content8"}).findNext('ul').findAllNext('table')
+        for table in results:
+            # print(table.findAll('tr'))
+            row = table.findAll('tr')[-1].td.contents
+            rawData.append(row)
+        # get next link
+        next_pageTag = soup.find('a', text="下一页")
+        if next_pageTag:
+            next_pagelink = next_pageTag.attrs['href']
+        else:
+            return rawData
+        while next_pagelink:
+            url = baseUrl + next_pagelink
+            print(url)
+            get_raw_movie_data(url, rawData)
+            time.sleep(1)
+
+
     except (exceptions.RequestException) as e:
         response.close()
-
         print(e)
-    else:
-        response.close()
 
+    return rawData
+
+
+def parse_raw_data(list):
     return None
 
 
@@ -46,4 +70,7 @@ def insert_data():
     return None
 
 
-get_movies(baseUrl)
+rawData = []
+indexUrl = baseUrl + 'index.html'
+get_raw_movie_data(indexUrl, rawData)
+print(rawData)
